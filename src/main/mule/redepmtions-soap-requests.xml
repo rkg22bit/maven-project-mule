@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <http:listener-config name="api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081"/>
+    </http:listener-config>	
+	
+	<flow name="redemptionsFlow" doc:id="2f732a72-60eb-42fe-b690-8e9bb222153f" >
+		<http:listener doc:name="Listener" doc:id="2d1d442a-3019-4bab-9084-592650495bcd" config-ref="api-httpListenerConfig" path="/dwl"/>
+		<set-payload value='[
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 9,
+    "discountAmount": 74.73,
+    "volume": 831.59,
+    "region": "NorthIsland",
+    "isSticky": false,
+    "siteId": 6895,
+    "fuelType": 2,
+    "banner": "New World",
+    "isThirdPary": false
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 9,
+    "discountAmount": 28.65,
+    "volume": 318.66,
+    "region": "SouthIsland",
+    "isSticky": false,
+    "siteId": 6895,
+    "fuelType": 3,
+    "banner": "New World",
+    "isThirdPary": false
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 9,
+    "discountAmount": 17.45,
+    "volume": 194.09,
+    "region": "NorthIsland",
+    "isSticky": false,
+    "siteId": 6895,
+    "fuelType": 6,
+    "banner": "New World",
+    "isThirdPary": false
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 8,
+    "discountAmount": 2.46,
+    "volume": 30.79,
+    "region": "SouthIsland",
+    "isSticky": true,
+    "siteId": 7299,
+    "fuelType": 2,
+    "banner": "Pak\u0027nSave",
+    "isThirdPary": true
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 8,
+    "discountAmount": 5.37,
+    "volume": 67.24,
+    "region": "SouthIsland",
+    "isSticky": true,
+    "siteId": 7299,
+    "fuelType": 6,
+    "banner": "Pak\u0027nSave",
+    "isThirdPary": true
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 10,
+    "discountAmount": 1.02,
+    "volume": 10.26,
+    "region": "SouthIsland",
+    "isSticky": false,
+    "siteId": 7685,
+    "fuelType": 2,
+    "banner": "New World",
+    "isThirdPary": false
+  },
+  {
+    "batchId": 5,
+    "transactionDate": "2018-03-15T00:00:00",
+    "centsPerLitre": 10,
+    "discountAmount": 3.73,
+    "volume": 37.4,
+    "region": "SouthIsland",
+    "isSticky": false,
+    "siteId": 7685,
+    "fuelType": 6,
+    "banner": "New World",
+    "isThirdPary": false
+  }
+]' doc:name="Set Payload" doc:id="c6d1b835-a875-4cdc-a5f4-fbcfefc6064c" mimeType="application/json"/>
+		<ee:transform doc:name="Transform Message" doc:id="df224ee7-f399-4825-a6e6-f81654d8ef67" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	sites: payload groupBy $.siteId
+	pluck {
+		siteId: $$,
+		isThirdParty: $.isThirdPary[0],					
+		redemptions: $ groupBy $.region pluck{
+			region: $$,
+			regions: $
+		}
+	} 
+}
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="87da1f04-d496-4c2f-a79a-3bc8dbef9f88" collection="payload.sites">
+			<choice doc:name="Choice" doc:id="66a7f15b-385b-4f17-907f-f7ed2baaaca6" >
+				<when expression="payload.isThirdParty==true" >
+					<set-variable value="#[payload]" doc:name="Set Variable" doc:id="e7891997-7ea5-4b76-be46-1e3463b8f695" variableName="orgPayload" mimeType="application/json" />
+					<ee:transform doc:name="Transform Message" doc:id="e15a0ff8-448e-4663-8cce-1273ab72beb1">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<ee:transform doc:name="Transform Message-ZX_ZD_ZW" doc:id="2da269b7-0395-4fef-87c1-bb2deaadafe4">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+import java!utils::LoyaltySum
+ns orac http://oracle.e1.bssv.JP564201/
+---
+orac#inboundEDIBatchHeader: {
+		
+			EDIBatchNumber: null,
+			date: now() as String { format: "d/MM/YYYY" },
+			inboundOrders: {
+				detail: LoyaltySum::getSummed(payload) map { 
+					grade:$.grade,
+					quantity: $.quantity,
+					lineDate: $.lineDate as Date as String { format: "d/MM/YYYY" }
+				},
+				siteID: payload.siteId as String,
+				orderType: "ZX"
+				
+			},
+			transactionOriginator: "FSTU_DFD"
+		}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="zdPayload" ><![CDATA[%dw 2.0
+output application/xml
+ns orac http://oracle.e1.bssv.JP564201/
+---
+orac#inboundEDIBatchHeader: {
+		
+			EDIBatchNumber: null,
+			date: now() as String { format: "d/MM/YYYY" },
+			inboundOrders: {
+				detail: vars.orgPayload.redemptions[0].regions map {
+					(loyalty:"LOY") if($.isSticky==true),
+					(loyalty: null) if($.isSticky==false),
+					quantity: $.volume,
+					(banner: "PS") if($.banner contains "Pak"),
+					(banner: "NW") if($.banner=="New World"),
+					gradeID: $.fuelType,
+					unitPrice: $.centsPerLitre,
+					lineDate: $.transactionDate as DateTime as String { format: "d/MM/YYYY" },
+					typeCrossReferenceTypeCode: "FD"
+				},
+				siteID: payload.siteId as String,
+				orderType: "ZD"
+				
+			},
+			transactionOriginator: "FSTU_DFD"
+		}
+]]></ee:set-variable>
+							<ee:set-variable variableName="zwPayload" ><![CDATA[%dw 2.0
+output application/xml
+ns orac http://oracle.e1.bssv.JP564201/
+---
+orac#inboundEDIBatchHeader: {
+		
+			EDIBatchNumber: null,
+			date: now() as String { format: "d/MM/YYYY" },
+			inboundOrders: {
+				detail: payload.redemptions[0].regions map {
+					(loyalty:"SC") if($.isSticky==true),
+					(loyalty:"NC") if($.isSticky==false),
+					quantity: $.volume,
+					(banner: "PS") if($.banner contains "Pak"),
+					(banner: "NW") if($.banner=="New World"),
+					gradeID: $.fuelType,
+					unitPrice: $.centsPerLitre,
+					lineDate: $.transactionDate as DateTime as String { format: "d/MM/YYYY" },
+					typeCrossReferenceTypeCode: "FD"
+				},
+				siteID: payload.siteId as String,
+				orderType: "ZW"
+				
+			},
+			transactionOriginator: "FSTU_DFD"
+		}
+
+]]></ee:set-variable>
+
+						</ee:variables>
+					</ee:transform>
+					<logger level="INFO" doc:name="Log ZX" doc:id="1fb0b233-2e2b-40a1-a03c-198922315bab" message="#[payload]" />
+					<logger level="INFO" doc:name="Log ZD" doc:id="52d2f305-f993-406b-980c-c44d7ed2c775" message="#[vars.zdPayload]"/>
+					<logger level="INFO" doc:name="Log ZW" doc:id="12451cf2-339c-47dc-9567-a978bc930e3e" message="#[vars.zwPayload]"/>
+				
+</when>
+				<otherwise >
+					<choice doc:name="Choice" doc:id="424c39c0-8bd0-4dd4-890f-53b9c52b5e69" >
+						<when expression="sizeOf(payload.redemptions) &gt;1" >
+							<foreach doc:name="For Each" doc:id="aa169bf8-faea-48bc-ab65-bb12aa547381" collection="payload.redemptions">
+								<ee:transform doc:name="Transform Message-ZW_SI_NI" doc:id="f22ae4eb-44f4-45f0-b1a9-5bdc713c5c3d">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns orac http://oracle.e1.bssv.JP564201/
+---
+orac#inboundEDIBatchHeader: {
+		
+			EDIBatchNumber: null,
+			date: now() as String { format: "d/MM/YYYY" },
+			inboundOrders: {
+				(customerID: "SI") if(payload.region=="SouthIsland"),
+				(customerID: "NI") if(payload.region=="NorthIsland"),
+				detail: payload.regions map {
+					(loyalty:"SC") if($.isSticky==true),
+					(loyalty:"NC") if($.isSticky==false),
+					quantity: $.volume,
+					(banner: "PS") if($.banner contains "Pak"),
+					(banner: "NW") if($.banner=="New World"),
+					gradeID: $.fuelType,
+					unitPrice: $.centsPerLitre,
+					lineDate: $.transactionDate as DateTime as String { format: "d/MM/YYYY" },
+					typeCrossReferenceTypeCode: "FD"
+				},
+				siteID: payload.regions[0].siteId as String,
+				orderType: "ZW"
+				
+			},
+			transactionOriginator: "FSTU_DFD"
+		}
+
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+								<logger level="INFO" doc:name="Log ZW_SI_NI" doc:id="0e7b2d43-8328-4313-9c31-16c04da6907a" message="#[payload]" />
+							</foreach>
+						</when>
+						<otherwise >
+							<ee:transform doc:name="Transform Message-ZW" doc:id="0f315d7e-877d-43bb-816d-b122601e63da">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns orac http://oracle.e1.bssv.JP564201/
+---
+orac#inboundEDIBatchHeader: {
+		
+			EDIBatchNumber: null,
+			date: now() as String { format: "d/MM/YYYY" },
+			inboundOrders: {
+				detail: payload.redemptions[0].regions map {
+					(loyalty:"SC") if($.isSticky==true),
+					(loyalty:"NC") if($.isSticky==false),
+					quantity: $.volume,
+					(banner: "PS") if($.banner contains "Pak"),
+					(banner: "NW") if($.banner=="New World"),
+					gradeID: $.fuelType,
+					unitPrice: $.centsPerLitre,
+					lineDate: $.transactionDate as DateTime as String { format: "d/MM/YYYY" },
+					typeCrossReferenceTypeCode: "FD"
+				},
+				siteID: payload.siteId as String,
+				orderType: "ZW"
+				
+			},
+			transactionOriginator: "FSTU_DFD"
+		}
+
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+							<logger level="INFO" doc:name="Log ZW" doc:id="524cc278-1d26-4470-b4dc-a73ba3902420" message="#[payload]"/>
+						</otherwise>
+					</choice>
+				</otherwise>
+			</choice>
+		
+</foreach>
+	</flow>  
+	</mule>
